@@ -81,8 +81,8 @@ export const AllPostsFeed: React.FC<AllPostsFeedProps> = ({ posts, minPrice, max
               [ NEMA OBJAVA KOJE ODGOVARAJU ZADANIM FILTERIMA PRETRAGE ]
             </div>
           ) : (
-            filteredPosts.map((post) => (
-              <div key={post.id} className="p-4 sm:p-5 hover:bg-slate-800/30 transition flex flex-col sm:flex-row items-start justify-between gap-4">
+            filteredPosts.map((post, idx) => (
+              <div key={post.id ? `${post.id}-${idx}` : idx} className="p-4 sm:p-5 hover:bg-slate-800/30 transition flex flex-col sm:flex-row items-start justify-between gap-4">
                 
                 <div className="flex-1 space-y-2">
                   <div className="flex items-center space-x-2 text-xs font-mono">

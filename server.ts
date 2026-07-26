@@ -463,9 +463,11 @@ async function generateAndCheckNewPost() {
   }
 }
 
+let logSeq = 0;
 function addLog(type: 'info' | 'success' | 'warning' | 'error', message: string) {
+  logSeq++;
   const entry: LogEntry = {
-    id: `log-${Date.now()}-${Math.floor(Math.random()*1000)}`,
+    id: `log-${Date.now()}-${logSeq}-${Math.floor(Math.random()*10000)}`,
     timestamp: new Date().toLocaleTimeString('hr-HR'),
     type,
     message

@@ -56,9 +56,9 @@ export const MatchedPostsList: React.FC<MatchedPostsListProps> = ({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {posts.map((post) => (
+        {posts.map((post, idx) => (
           <div
-            key={post.id}
+            key={`${post.id || 'post'}-${idx}`}
             className="bg-slate-900/60 border border-emerald-500/30 hover:border-emerald-500/60 transition-all rounded-xl overflow-hidden shadow-xl flex flex-col justify-between group backdrop-blur-sm"
           >
             <div>
@@ -120,8 +120,8 @@ export const MatchedPostsList: React.FC<MatchedPostsListProps> = ({
                   </div>
 
                   <div className="flex flex-wrap gap-1 font-mono">
-                    {post.matchedKeywords.map((kw) => (
-                      <span key={kw} className="bg-slate-950 text-emerald-400/90 text-[10px] px-2 py-0.5 rounded border border-emerald-500/20">
+                    {post.matchedKeywords.map((kw, kwIdx) => (
+                      <span key={`${kw}-${kwIdx}`} className="bg-slate-950 text-emerald-400/90 text-[10px] px-2 py-0.5 rounded border border-emerald-500/20">
                         #{kw}
                       </span>
                     ))}

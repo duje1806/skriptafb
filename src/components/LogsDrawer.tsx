@@ -21,8 +21,8 @@ export const LogsDrawer: React.FC<LogsDrawerProps> = ({ logs }) => {
         {logs.length === 0 ? (
           <div className="text-slate-600 text-center py-4 text-xs font-mono">[ COLD START - CEKA SE PRVI SCAN ]</div>
         ) : (
-          logs.map((log) => (
-            <div key={log.id} className="flex items-start space-x-2 leading-relaxed">
+          logs.map((log, index) => (
+            <div key={log.id ? `${log.id}-${index}` : index} className="flex items-start space-x-2 leading-relaxed">
               <span className="text-slate-600 text-[10px] select-none font-mono">[{log.timestamp}]</span>
               
               {log.type === 'success' && <CheckCircle className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0 mt-0.5" />}
