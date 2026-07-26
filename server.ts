@@ -73,7 +73,7 @@ let postsStore: Post[] = [
     size: "52m²",
     author: "Marko Horvat",
     authorAvatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80",
-    postUrl: "https://www.facebook.com/groups/najamzagreb/posts/101598273612/",
+    postUrl: "https://www.facebook.com/groups/najamzagreb/permalink/101598273612/",
     postedAt: new Date(Date.now() - 1000 * 60 * 15).toISOString(), // 15 mins ago
     scannedAt: new Date().toISOString(),
     isOffer: true,
@@ -100,7 +100,7 @@ let postsStore: Post[] = [
     size: "28m²",
     author: "Ana Babić",
     authorAvatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=100&auto=format&fit=crop&q=80",
-    postUrl: "https://www.facebook.com/groups/najamzagreb/posts/101598273613/",
+    postUrl: "https://www.facebook.com/groups/najamzagreb/permalink/101598273613/",
     postedAt: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
     scannedAt: new Date().toISOString(),
     isOffer: true,
@@ -127,7 +127,7 @@ let postsStore: Post[] = [
     size: "Dvosobni",
     author: "Ivan & Petra",
     authorAvatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=80",
-    postUrl: "https://www.facebook.com/groups/najamzagreb/posts/101598273614/",
+    postUrl: "https://www.facebook.com/groups/najamzagreb/permalink/101598273614/",
     postedAt: new Date(Date.now() - 1000 * 60 * 90).toISOString(),
     scannedAt: new Date().toISOString(),
     isOffer: false, // Potražnja - FILTERED OUT!
@@ -146,7 +146,7 @@ let postsStore: Post[] = [
     size: "85m²",
     author: "Luka Kovačić",
     authorAvatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&auto=format&fit=crop&q=80",
-    postUrl: "https://www.facebook.com/groups/najamzagreb/posts/101598273615/",
+    postUrl: "https://www.facebook.com/groups/najamzagreb/permalink/101598273615/",
     postedAt: new Date(Date.now() - 1000 * 60 * 120).toISOString(),
     scannedAt: new Date().toISOString(),
     isOffer: true,
@@ -440,14 +440,20 @@ async function generateAndCheckNewPost() {
   const loc = ZAGREB_LOCATIONS[Math.floor(Math.random() * ZAGREB_LOCATIONS.length)];
   const author = LANDLORD_NAMES[Math.floor(Math.random() * LANDLORD_NAMES.length)];
   const img = APARTMENT_IMAGES[Math.floor(Math.random() * APARTMENT_IMAGES.length)];
-  const postId = `fb-${Date.now().toString().slice(-6)}`;
+  const postId = `276832${Math.floor(Math.random() * 89999) + 10000}`;
+
+  // 15% chance of being a post without images (text-only demand or comment)
+  const hasPhotos = Math.random() > 0.15;
+  const postImages = hasPhotos ? [img] : [];
 
   const content = `Iznajmljuje se prekrasan namješten stan u kvartu ${loc}. Stan ima 2 sobe, potpuno opremljenu kuhinju, kupaonicu i perilicu rublja. Blizina javnog prijevoza i trgovina. Cijena je ${price} EUR mjesečno. Polog u visini jedne stanarine. Zvati na broj ili poruka u inbox.`;
 
   const parsed = await parsePostContent(content);
   
+  // Strict rule: MUST be an offer, MUST have at least 1 image, and MUST be within min-max price range!
   const isInPriceRange = Boolean(
     parsed.isOffer && 
+    hasPhotos &&
     parsed.price !== null && 
     parsed.price >= monitorSettings.minPrice && 
     parsed.price <= monitorSettings.maxPrice
@@ -463,12 +469,12 @@ async function generateAndCheckNewPost() {
     size: parsed.size,
     author,
     authorAvatar: `https://images.unsplash.com/photo-${1500000000000 + Math.floor(Math.random()*100000)}?w=100&auto=format&fit=crop&q=80`,
-    postUrl: `https://www.facebook.com/groups/najamzagreb/posts/${postId}/`,
+    postUrl: `https://www.facebook.com/groups/najamzagreb/permalink/${postId}/`,
     postedAt: new Date().toISOString(),
     scannedAt: new Date().toISOString(),
     isOffer: parsed.isOffer,
     isInPriceRange,
-    images: [img],
+    images: postImages,
     matchedKeywords: parsed.matchedKeywords,
     notificationSent: false,
     notificationLog: []
@@ -500,7 +506,9 @@ async function generateAndCheckNewPost() {
       newPost.notificationLog.push({ channel: "telegram", sentAt: new Date().toISOString(), status: "success", recipient: monitorSettings.telegramConfig.chatId });
     }
 
-    addLog('success', `🎉 PRONAĐEN STAN! ${loc} - ${price} EUR! Poslane notifikacije na dostupne kanale.`);
+    addLog('success', `🎉 PRONAĐEN STAN SA SLIKAMA! ${loc} - ${price} EUR! Poslane notifikacije na dostupne kanale.`);
+  } else if (!hasPhotos) {
+    addLog('info', `Pregledana objava (${loc}): Preskočeno jer nema priloženih slika stana.`);
   } else {
     addLog('info', `Pregledana objava: ${loc} (${price ? price + ' EUR' : 'Bez cijene'}). Izvan zadanog ranga [500-700€].`);
   }

@@ -80,9 +80,13 @@ export const MatchedPostsList: React.FC<MatchedPostsListProps> = ({
                   {post.price ? `${post.price} EUR/mj` : 'Cijena na upit'}
                 </div>
 
+                <div className="absolute bottom-3 left-3 bg-slate-950/80 backdrop-blur-md text-emerald-300 border border-emerald-500/30 text-[10px] font-mono font-semibold px-2 py-1 rounded flex items-center shadow-md">
+                  📷 {post.images?.length || 1} slika stana priložena
+                </div>
+
                 <div className="absolute top-3 right-3 bg-slate-950/90 backdrop-blur-md text-emerald-300 border border-emerald-500/40 text-[10px] font-mono uppercase tracking-wider font-semibold px-2.5 py-1 rounded-lg flex items-center shadow-md">
                   <CheckCircle className="w-3.5 h-3.5 mr-1 text-emerald-400" />
-                  WhatsApp Poslano
+                  Poslano
                 </div>
               </div>
 
