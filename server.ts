@@ -195,6 +195,9 @@ const APARTMENT_IMAGES = [
   "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=600&auto=format&fit=crop&q=80"
 ];
 
+// AI Gemini cooldown state
+let geminiCooldownUntil = 0;
+
 // Helper: Parse text using Gemini or Regex fallback
 async function parsePostContent(content: string): Promise<{
   price: number | null;
@@ -209,8 +212,8 @@ async function parsePostContent(content: string): Promise<{
   const isRequest = monitorSettings.excludeWords.some(w => contentLower.includes(w.toLowerCase()));
   const isOffer = !isRequest;
 
-  // Try Gemini AI parsing if key available and enabled
-  if (aiClient && monitorSettings.aiFilterEnabled) {
+  // Try Gemini AI parsing if key available, enabled, and not in cooldown
+  if (aiClient && monitorSettings.aiFilterEnabled && Date.now() > geminiCooldownUntil) {
     try {
       const response = await aiClient.models.generateContent({
         model: 'gemini-3.6-flash',
@@ -242,8 +245,14 @@ Vrati SAMO čisti JSON bez markdown oznaka.`
         isOffer: Boolean(parsed.isOffer),
         matchedKeywords: matched
       };
-    } catch (e) {
-      console.warn("Gemini parsing failed, falling back to regex parser:", e);
+    } catch (e: any) {
+      const errStr = String(e?.message || e || "");
+      if (errStr.includes("429") || errStr.includes("RESOURCE_EXHAUSTED") || errStr.includes("Quota exceeded")) {
+        geminiCooldownUntil = Date.now() + 60 * 1000; // 60s cooldown
+        console.log("[AI Parser] Gemini free tier rate limit reached (429). Using Regex parser fallback for 60s.");
+      } else {
+        console.log("[AI Parser] Gemini parse error, using Regex parser fallback:", e?.message || e);
+      }
     }
   }
 
