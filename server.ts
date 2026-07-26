@@ -37,7 +37,7 @@ let monitorSettings: MonitorSettings = {
   maxPrice: 700,
   targetGroupUrl: "https://www.facebook.com/groups/najamzagreb",
   keywords: ["Trešnjevka", "Jarun", "Centar", "Maksimir", "Lanište", "dvosobni", "garsonijera", "balkon"],
-  excludeWords: ["tražim", "potražnja", "dijelim stan", "traži se"],
+  excludeWords: ["tražim", "trazim", "potražnja", "potraznja", "dijelim stan", "traži se", "trazi se", "unajmljujem", "unajmljujemo", "tražimo", "trazimo", "komentar", "re:"],
   aiFilterEnabled: true,
   dataMode: "simulated",
   whatsappConfig: {
@@ -221,13 +221,13 @@ async function parsePostContent(content: string): Promise<{
     try {
       const response = await aiClient.models.generateContent({
         model: 'gemini-3.6-flash',
-        contents: `Analiziraj ovaj tekst oglasa iz Facebook grupe za najam stanova u Zagrebu i vrati JSON sa sljedećim poljima:
+        contents: `Analiziraj ovaj tekst iz Facebook grupe za najam stanova u Zagrebu i vrati JSON sa sljedećim poljima:
 - price: broj u EUR (ili null ako nema cijene)
 - location: kvart u Zagrebu (npr. Trešnjevka, Jarun, Centar...)
 - size: opis veličine (npr. 45m2 ili dvosobni)
-- isOffer: boolean (true ako se stan iznajmljuje/daje u najam, false ako netko traži stan za sebe)
+- isOffer: boolean (STRIKTNO true samo ako vlasnik/najmodavac nudi stan u najam. Obavezno FALSE ako netko traži stan za sebe, unajmljuje, traži cimericu, komentira ili pita bilo što)
 
-Tekst oglasa:
+Tekst oglasa ili komentara:
 "${content}"
 
 Vrati SAMO čisti JSON bez markdown oznaka.`
