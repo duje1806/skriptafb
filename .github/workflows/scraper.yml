@@ -1,0 +1,30 @@
+name: Najam Zagreb FB Scraper & WhatsApp Alert
+
+on:
+  schedule:
+    - cron: '*/15 * * * *' # Pokreće se automatski svakih 15 minuta u oblaku!
+  workflow_dispatch: # Omogućava i ručno pokretanje na klik
+
+jobs:
+  scrape-and-notify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout koda
+        uses: actions/checkout@v4
+
+      - name: Postavke Node.js okruženja
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Instalacija ovisnosti
+        run: npm install puppeteer axios
+
+      - name: Pokretanje Scrapera
+        env:
+          MIN_PRICE: 500
+          MAX_PRICE: 700
+          PHONE_NUMBER: '${{ secrets.PHONE_NUMBER }}'
+          CALLMEBOT_API_KEY: '${{ secrets.CALLMEBOT_API_KEY }}'
+        run: node scraper.js
