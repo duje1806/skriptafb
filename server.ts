@@ -3,7 +3,7 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
-import { Post, MonitorSettings, MonitorStatus, LogEntry } from "./src/types.js";
+import { Post, MonitorSettings, MonitorStatus, LogEntry } from "./src/types";
 
 dotenv.config();
 
@@ -426,8 +426,109 @@ async function sendWebhookNotification(post: Post): Promise<boolean> {
   }
 }
 
-// Simulated Generator for new Facebook Posts
+// Helper to fetch REAL live posts from Apify if APIFY_API_TOKEN is provided
+async function fetchApifyLivePosts(): Promise<boolean> {
+  const token = process.env.APIFY_API_TOKEN;
+  if (!token) return false;
+
+  try {
+    addLog('info', `📡 Pokrećem Apify uživo skeniranje grupe facebook.com/groups/najamzagreb...`);
+    const apifyUrl = `https://api.apify.com/v2/acts/apify~facebook-groups-scraper/run-sync-get-dataset-items?token=${token}`;
+    
+    const response = await fetch(apifyUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        startUrls: [{ url: "https://www.facebook.com/groups/najamzagreb" }],
+        maxPosts: 5,
+        resultsLimit: 5
+      })
+    });
+
+    if (!response.ok) {
+      addLog('error', `Apify API vraća status ${response.status}: Provjerite je li APIFY_API_TOKEN ispravan.`);
+      return false;
+    }
+
+    const items = await response.json() as any[];
+    if (!Array.isArray(items) || items.length === 0) {
+      addLog('info', `Apify nije pronašao nove objave u ovom ciklusu.`);
+      return true;
+    }
+
+    addLog('info', `Apify skrapirao ${items.length} stvarnih objava s Facebooka.`);
+
+    for (const item of items) {
+      const rawText = item.text || item.message || item.postText || '';
+      const postImages = item.media || item.images || item.photos || (item.imageUrl ? [item.imageUrl] : []);
+      const url = item.url || item.postUrl || item.link || `https://www.facebook.com/groups/najamzagreb/permalink/${item.id || Date.now()}`;
+      const postId = String(item.id || item.postId || Date.now());
+
+      // Check if already processed
+      if (postsStore.some(p => p.id === postId || p.postUrl === url)) continue;
+
+      totalScanned++;
+      const parsed = await parsePostContent(rawText);
+      const hasPhotos = postImages.length > 0;
+
+      const isInPriceRange = Boolean(
+        parsed.isOffer &&
+        hasPhotos &&
+        parsed.price !== null &&
+        parsed.price >= monitorSettings.minPrice &&
+        parsed.price <= monitorSettings.maxPrice
+      );
+
+      const realPost: Post = {
+        id: postId,
+        title: `Stan ${parsed.location || 'Zagreb'} (${parsed.price ? parsed.price + ' EUR' : 'Cijena na upit'})`,
+        content: rawText,
+        price: parsed.price,
+        currency: "EUR",
+        location: parsed.location || 'Zagreb',
+        size: parsed.size || 'Stan',
+        author: item.user?.name || item.authorName || 'FB Korisnik',
+        authorAvatar: item.user?.profilePic || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80",
+        postUrl: url,
+        postedAt: item.time || new Date().toISOString(),
+        scannedAt: new Date().toISOString(),
+        isOffer: parsed.isOffer,
+        isInPriceRange,
+        images: postImages,
+        matchedKeywords: parsed.matchedKeywords,
+        notificationSent: false,
+        notificationLog: []
+      };
+
+      postsStore.unshift(realPost);
+      if (postsStore.length > 50) postsStore.pop();
+
+      if (isInPriceRange) {
+        totalMatched++;
+        totalNotificationsSent++;
+        realPost.notificationSent = true;
+
+        await sendWhatsappNotification(realPost);
+        await sendNtfyNotification(realPost);
+        await sendTelegramNotification(realPost);
+        await sendWebhookNotification(realPost);
+
+        addLog('success', `🎉 PRONAĐEN STVARNI STAN S FACEBOOKA! ${realPost.location} - ${realPost.price} EUR! Poslane notifikacije.`);
+      }
+    }
+
+    return true;
+  } catch (err: any) {
+    addLog('error', `Greška pri Apify uživo skeniranju: ${err.message}`);
+    return false;
+  }
+}
+
+// Simulated Generator for new Facebook Posts (Fallback if no APIFY_API_TOKEN)
 async function generateAndCheckNewPost() {
+  const usedApify = await fetchApifyLivePosts();
+  if (usedApify) return; // Managed by Apify live scraper!
+
   totalScanned++;
   
   // Decide price range to simulate realistic variance

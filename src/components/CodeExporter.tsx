@@ -18,10 +18,10 @@ export const CodeExporter: React.FC<CodeExporterProps> = ({
   const [copied, setCopied] = useState(false);
 
   const nodeScript = `/**
- * Facebook Najam Zagreb - Auto Scraper & WhatsApp Alert Script
- * -------------------------------------------------------------
- * Pokreće se 24/7 i svako 60 sekundi provjerava grupu 'najamzagreb'.
- * Šalje besplatne WhatsApp notifikacije na vaš mobitel.
+ * Facebook Najam Zagreb - 100% FREE Auto Scraper & Push Notification Script
+ * --------------------------------------------------------------------------
+ * Pokreće se besplatno na vašem računalu ili poslužitelju.
+ * Šalje besplatne instant zvučne obavijesti na mobitel putem ntfy.sh
  */
 
 const axios = require('axios');
@@ -31,26 +31,27 @@ const puppeteer = require('puppeteer');
 const CHECK_INTERVAL_SECONDS = 60;
 const MIN_PRICE = ${minPrice};
 const MAX_PRICE = ${maxPrice};
-const PHONE_NUMBER = "${phoneNumber || '+385912345678'}";
-const CALLMEBOT_API_KEY = "${apiKey || '123456'}";
+const NTFY_TOPIC = "stanovi-zagreb-moj-kanal"; // Vaš ntfy.sh kanal
 const FB_GROUP_URL = "https://www.facebook.com/groups/najamzagreb";
 
 const scannedPostIds = new Set();
 
-async function sendWhatsAppAlert(post) {
-  const message = \`🚨 *NOVA PONUDA STANA U ZAGREBU!* 🚨\\n\\n\` +
-    \`💰 *Cijena:* \${post.price} EUR\\n\` +
-    \`📍 *Kvart:* \${post.location || 'Zagreb'}\\n\` +
-    \`📝 *Opis:* \${post.text.slice(0, 150)}...\\n\\n\` +
-    \`🔗 *FB Link:* \${post.url}\`;
-
-  const encodedUrl = \`https://api.callmebot.com/whatsapp.php?phone=\${encodeURIComponent(PHONE_NUMBER)}&text=\${encodeURIComponent(message)}&apikey=\${CALLMEBOT_API_KEY}\`;
-
+async function sendFreePushAlert(post) {
   try {
-    await axios.get(encodedUrl);
-    console.log(\`[✓] Poslana WhatsApp poruka za stan \${post.price} EUR!\`);
+    await axios.post(\`https://ntfy.sh/\${NTFY_TOPIC}\`, 
+      \`📍 Kvart: \${post.location || 'Zagreb'}\\n💰 Cijena: \${post.price} EUR\\n\\nLink: \${post.url}\`,
+      {
+        headers: {
+          'Title': \`🚨 NOVI STAN: \${post.price} EUR\`,
+          'Priority': 'high',
+          'Tags': 'house,euro',
+          'Click': post.url
+        }
+      }
+    );
+    console.log(\`[✓] Poslana besplatna push notifikacija za stan \${post.price} EUR!\`);
   } catch (err) {
-    console.error('[x] Greška pri slanju WhatsApp poruke:', err.message);
+    console.error('[x] Greška pri slanju ntfy obavijesti:', err.message);
   }
 }
 
@@ -60,7 +61,7 @@ function parsePrice(text) {
 }
 
 async function scanFacebookGroup() {
-  console.log(\`[ \${new Date().toLocaleTimeString()} ] Pokrećem provjeru grupe najamzagreb...\`);
+  console.log(\`[ \${new Date().toLocaleTimeString()} ] Skeniram FB grupu najamzagreb...\`);
 
   try {
     const browser = await puppeteer.launch({ 
@@ -70,28 +71,32 @@ async function scanFacebookGroup() {
     const page = await browser.newPage();
     await page.goto(FB_GROUP_URL, { waitUntil: 'networkidle2' });
 
-    // Izvlačenje objave s stranice
+    // Izvlačenje objava s fotkama
     const posts = await page.evaluate(() => {
       const elements = Array.from(document.querySelectorAll('div[role="feed"] > div'));
-      return elements.slice(0, 5).map((el, i) => ({
-        id: 'post-' + i,
-        text: el.innerText || '',
-        url: window.location.href
-      }));
+      return elements.slice(0, 5).map((el, i) => {
+        const hasImages = el.querySelectorAll('img').length > 1; // Ma barem 1 slika stana
+        return {
+          id: 'post-' + i,
+          text: el.innerText || '',
+          hasImages,
+          url: window.location.href
+        };
+      });
     });
 
     await browser.close();
 
     for (const p of posts) {
-      if (!p.text || scannedPostIds.has(p.id)) continue;
+      if (!p.text || scannedPostIds.has(p.id) || !p.hasImages) continue;
       scannedPostIds.add(p.id);
 
       const price = parsePrice(p.text);
       const isOffer = !p.text.toLowerCase().includes('tražim') && !p.text.toLowerCase().includes('potražnja');
 
       if (isOffer && price && price >= MIN_PRICE && price <= MAX_PRICE) {
-        console.log(\`[★] PRONAĐEN STAN: \${price} EUR!\`);
-        await sendWhatsAppAlert({ ...p, price });
+        console.log(\`[★] PRONAĐEN STAN S FOTKAMA: \${price} EUR!\`);
+        await sendFreePushAlert({ ...p, price });
       }
     }
   } catch (err) {
@@ -99,41 +104,41 @@ async function scanFacebookGroup() {
   }
 }
 
-// Glavna 60s Petlja
-console.log('Sustav za praćenje najamzagreb je pokrenut!');
+// Glavna petlja
+console.log('100% Besplatni skraper za stanove u Zagrebu je pokrenut!');
 setInterval(scanFacebookGroup, CHECK_INTERVAL_SECONDS * 1000);
 scanFacebookGroup();
 `;
 
-  const pythonScript = `# Facebook Najam Zagreb - Python 24/7 Monitor & WhatsApp Bot
+  const pythonScript = `# Facebook Najam Zagreb - 100% Free Python Scraper & ntfy.sh Push Alert
 import time
-import re
-import urllib.parse
 import requests
 
 CHECK_INTERVAL = 60
 MIN_PRICE = ${minPrice}
 MAX_PRICE = ${maxPrice}
-PHONE_NUMBER = "${phoneNumber || '+385912345678'}"
-API_KEY = "${apiKey || '123456'}"
+NTFY_TOPIC = "stanovi-zagreb-moj-kanal" # Unesite naziv vaše teme iz ntfy aplikacije
 FB_URL = "https://www.facebook.com/groups/najamzagreb"
 
-def send_whatsapp_alert(price, text, url):
-    msg = f"🚨 *NOVI STAN NAJAM ZAGREB ({price} EUR)* 🚨\\n\\nOpis: {text[:150]}...\\n\\nLink: {url}"
-    encoded = urllib.parse.quote(msg)
-    callmebot_url = f"https://api.callmebot.com/whatsapp.php?phone={PHONE_NUMBER}&text={encoded}&apikey={API_KEY}"
+def send_free_push_alert(price, location, url):
+    payload = f"📍 Kvart: {location}\\n💰 Cijena: {price} EUR\\n\\nLink: {url}"
+    headers = {
+        "Title": f"🚨 NOVI STAN: {price} EUR",
+        "Priority": "high",
+        "Tags": "house,euro",
+        "Click": url
+    }
     try:
-        r = requests.get(callmebot_url)
+        r = requests.post(f"https://ntfy.sh/{NTFY_TOPIC}", data=payload.encode('utf-8'), headers=headers)
         if r.status_code == 200:
-            print(f"[✓] WhatsApp notifikacija uspješno poslana za {price} EUR!")
+            print(f"[✓] Instant push obavijest poslana na mobitel za stan {price} EUR!")
     except Exception as e:
         print("[x] Greška:", e)
 
 def main():
-    print("Python skripta za praćenje FB grupe najamzagreb je aktivna...")
+    print("Python 100% besplatna skripta aktivna...")
     while True:
-        print(f"[{time.strftime('%H:%M:%S')}] Provjera grupe svakih 60 sekundi...")
-        # Ovdje integrirajte vaš scraper ili web_driver
+        print(f"[{time.strftime('%H:%M:%S')}] Provjera FB grupe...")
         time.sleep(CHECK_INTERVAL)
 
 if __name__ == "__main__":

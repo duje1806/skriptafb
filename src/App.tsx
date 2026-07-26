@@ -25,12 +25,12 @@ export default function App() {
         fetch('/api/posts')
       ]);
 
-      if (statusRes.ok) {
-        const statusData = await statusRes.ok ? await statusRes.json() : null;
+      if (statusRes.ok && statusRes.headers.get('content-type')?.includes('application/json')) {
+        const statusData = await statusRes.json();
         if (statusData) setStatus(statusData);
       }
 
-      if (postsRes.ok) {
+      if (postsRes.ok && postsRes.headers.get('content-type')?.includes('application/json')) {
         const postsData = await postsRes.json();
         setPosts(postsData);
       }
