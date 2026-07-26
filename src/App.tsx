@@ -80,9 +80,9 @@ export default function App() {
   };
 
   const handleSendTestNotification = async (
-    channel: 'whatsapp' | 'telegram', 
-    customPost?: Post | { phone?: string; apiKey?: string; botToken?: string; chatId?: string },
-    customParams?: { phone?: string; apiKey?: string; botToken?: string; chatId?: string }
+    channel: 'whatsapp' | 'telegram' | 'ntfy', 
+    customPost?: Post | { phone?: string; apiKey?: string; botToken?: string; chatId?: string; topic?: string },
+    customParams?: { phone?: string; apiKey?: string; botToken?: string; chatId?: string; topic?: string }
   ) => {
     try {
       let payload: any = { channel };

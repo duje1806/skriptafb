@@ -17,7 +17,7 @@ export interface Post {
   matchedKeywords: string[];
   notificationSent: boolean;
   notificationLog?: {
-    channel: 'whatsapp' | 'telegram' | 'webhook' | 'simulator';
+    channel: 'whatsapp' | 'telegram' | 'ntfy' | 'webhook' | 'simulator';
     sentAt: string;
     status: 'success' | 'failed' | 'simulated';
     recipient?: string;
@@ -33,6 +33,11 @@ export interface WhatsappConfig {
   accountSid?: string; // Twilio SID
   authToken?: string; // Twilio Auth Token
   fromNumber?: string; // Twilio Sender Number
+}
+
+export interface NtfyConfig {
+  enabled: boolean;
+  topic: string; // e.g. stanovi-zagreb-123
 }
 
 export interface TelegramConfig {
@@ -59,6 +64,7 @@ export interface MonitorSettings {
   apifyToken?: string;
   apifyActorId?: string;
   whatsappConfig: WhatsappConfig;
+  ntfyConfig?: NtfyConfig;
   telegramConfig: TelegramConfig;
   webhookConfig: WebhookConfig;
 }

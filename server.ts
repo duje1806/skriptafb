@@ -46,6 +46,10 @@ let monitorSettings: MonitorSettings = {
     phoneNumber: "+385912345678",
     apiKey: "123456"
   },
+  ntfyConfig: {
+    enabled: true,
+    topic: "stanovi-zagreb-obavijesti"
+  },
   telegramConfig: {
     enabled: false,
     botToken: "",
@@ -363,6 +367,42 @@ async function sendTelegramNotification(post: Post, forceSend = false): Promise<
   }
 }
 
+async function sendNtfyNotification(post: Post, forceSend = false): Promise<{ success: boolean; detail?: string }> {
+  const cfg = monitorSettings.ntfyConfig;
+  if (!cfg || (!cfg.enabled && !forceSend) || !cfg.topic) {
+    return { success: false, detail: 'ntfy.sh tema nije unesena.' };
+  }
+
+  const topic = cfg.topic.trim().replace(/[^a-zA-Z0-9_-]/g, '');
+  if (!topic) {
+    return { success: false, detail: 'Neispravan ntfy.sh naziv teme.' };
+  }
+
+  const url = `https://ntfy.sh/${topic}`;
+
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Title': `Novi Stan Zagreb (${post.price} EUR)`,
+        'Priority': 'high',
+        'Tags': 'house,euro',
+        'Click': post.postUrl
+      },
+      body: `Lokacija: ${post.location}\nCijena: ${post.price} EUR\nIznajmljuje: ${post.author}\n\nLink: ${post.postUrl}`
+    });
+
+    if (res.ok) {
+      return { success: true, detail: `Instant Push obavijest poslana na ntfy.sh/${topic}` };
+    } else {
+      const txt = await res.text();
+      return { success: false, detail: `ntfy.sh greška: ${txt.slice(0, 100)}` };
+    }
+  } catch (err: any) {
+    return { success: false, detail: `ntfy mrežna greška: ${err.message}` };
+  }
+}
+
 async function sendWebhookNotification(post: Post): Promise<boolean> {
   const cfg = monitorSettings.webhookConfig;
   if (!cfg.enabled || !cfg.url) return false;
@@ -445,19 +485,22 @@ async function generateAndCheckNewPost() {
 
     // Dispatch notifications
     const waResult = await sendWhatsappNotification(newPost);
+    const ntfyResult = await sendNtfyNotification(newPost);
     const tgResult = await sendTelegramNotification(newPost);
     const whResult = await sendWebhookNotification(newPost);
 
-    newPost.notificationLog = [
-      {
-        channel: "whatsapp",
-        sentAt: new Date().toISOString(),
-        status: waResult ? "success" : "simulated",
-        recipient: monitorSettings.whatsappConfig.phoneNumber
-      }
-    ];
+    newPost.notificationLog = [];
+    if (waResult.success) {
+      newPost.notificationLog.push({ channel: "whatsapp", sentAt: new Date().toISOString(), status: "success", recipient: monitorSettings.whatsappConfig.phoneNumber });
+    }
+    if (ntfyResult.success) {
+      newPost.notificationLog.push({ channel: "ntfy", sentAt: new Date().toISOString(), status: "success", recipient: monitorSettings.ntfyConfig?.topic });
+    }
+    if (tgResult.success) {
+      newPost.notificationLog.push({ channel: "telegram", sentAt: new Date().toISOString(), status: "success", recipient: monitorSettings.telegramConfig.chatId });
+    }
 
-    addLog('success', `🎉 PRONAĐEN STAN! ${loc} - ${price} EUR! Poslana notifikacija na WhatsApp.`);
+    addLog('success', `🎉 PRONAĐEN STAN! ${loc} - ${price} EUR! Poslane notifikacije na dostupne kanale.`);
   } else {
     addLog('info', `Pregledana objava: ${loc} (${price ? price + ' EUR' : 'Bez cijene'}). Izvan zadanog ranga [500-700€].`);
   }
@@ -548,7 +591,7 @@ app.post("/api/check-now", async (req, res) => {
 });
 
 app.post("/api/test-notification", async (req, res) => {
-  const { channel, phone, apiKey, botToken, chatId } = req.body;
+  const { channel, phone, apiKey, botToken, chatId, topic } = req.body;
   
   const samplePost: Post = {
     id: "test-999",
@@ -580,6 +623,16 @@ app.post("/api/test-notification", async (req, res) => {
 
     monitorSettings.whatsappConfig.phoneNumber = origPhone;
     monitorSettings.whatsappConfig.apiKey = origKey;
+  } else if (channel === 'ntfy') {
+    const origTopic = monitorSettings.ntfyConfig?.topic || '';
+    if (!monitorSettings.ntfyConfig) {
+      monitorSettings.ntfyConfig = { enabled: true, topic: topic || 'stanovi-zagreb' };
+    }
+    if (topic) monitorSettings.ntfyConfig.topic = topic;
+
+    result = await sendNtfyNotification(samplePost, true);
+
+    monitorSettings.ntfyConfig.topic = origTopic;
   } else if (channel === 'telegram') {
     const origToken = monitorSettings.telegramConfig.botToken;
     const origChat = monitorSettings.telegramConfig.chatId;
