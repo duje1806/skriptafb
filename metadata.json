@@ -1,0 +1,6 @@
+{
+  "name": "Facebook Najam Zagreb Monitor",
+  "description": "Nadzorna ploča i pozadinska skripta za kontinuirano praćenje Facebook grupe najamzagreb, filtriranje stanova od 500€ do 700€ i slanje WhatsApp / Telegram notifikacija svakih 60 sekundi.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
